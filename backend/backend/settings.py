@@ -30,9 +30,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
-
 # Application definition
-
 INSTALLED_APPS = [
 
     'django.contrib.sites',
@@ -47,8 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'User',
-
-
+    'clue',
     # Allauth (for OAuth only)
     'allauth',
     'allauth.account',
