@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Loader2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-
+import { type Variants, type RepeatType } from "framer-motion";
 const HomePage = () => {
   const letters = [
     { text: "Djan", color: "#00FFA3" },  // neon green
@@ -12,19 +12,19 @@ const HomePage = () => {
     { text: "JWT", color: "#FF6D00" },   // neon orange
   ];
 
-  const blobVariants = {
-    animate: {
-      scale: [0.9, 1.1, 0.9],
-      x: [-60, 80, -60],
-      y: [-70, 60, -70],
-      transition: {
-        duration: 10,
-        repeat: Infinity,
-        repeatType: "mirror",
-        ease: "easeInOut",
+    const blobVariants: Variants = {
+      animate: {
+        scale: [0.9, 1.1, 0.9],
+        x: [-60, 80, -60],
+        y: [-70, 60, -70],
+        transition: {
+          duration: 10,
+          repeat: Infinity,
+          repeatType: "mirror" as RepeatType,
+          ease: "easeInOut",
+        },
       },
-    },
-  };
+    };
 
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();

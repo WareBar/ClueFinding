@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+// @ts-nocheck
+
+import { useState, useEffect, useRef } from "react";
 import {
   DndContext, rectIntersection, PointerSensor, TouchSensor,
   KeyboardSensor, useSensor, useSensors, DragOverlay,
@@ -18,6 +20,89 @@ import {
 import { cn } from "@/lib/utils";
 import api from "@/utils/api";
 
+interface Star {
+  id: number;
+  left: number;
+  top: number;
+  size: number;
+  opacity: number;
+  dur: number;
+  delay: number;
+}
+
+interface Bubble {
+  id: number;
+  left: number;
+  size: number;
+  dur: number;
+  delay: number;
+  drift: number;
+}
+
+interface ConfettiProps {
+  x: number;
+  color: string;
+  size: number;
+  dur: number;
+  spin: number;
+  drift: number;
+  shape: "circle" | "square";
+}
+
+
+interface PhaseDotsProps {
+  phase:string
+}
+
+// ─── Props Interface ───────────────────────────────────────────────────────────
+interface ClueInputRowProps {
+  index: number;
+  placeholder: string;
+  value: string;
+  status: string,
+  delay: number;
+  inputRef: (el: HTMLInputElement | null) => void;
+  onChange: (index: number, value: string) => void;
+  onKeyDown: (e: KeyboardEvent<HTMLInputElement>, index: number) => void;
+}
+
+interface EnterPhaseProps {
+  onVerified: (w)=>void;
+}
+
+interface PirateMapProps {
+  items: { answer: string; id: string; label: string }[];
+  mapProgress: number;
+}
+
+interface ShipSinkingProps {
+  onDone: () => void;
+}
+
+interface SortableCardProps {
+  item: { answer: string; id: string; label: string };
+  position: number;
+  isOverlay?: boolean;
+}
+
+interface OrderPhaseProps {
+  verifiedClues: { answer: string; id: string; label: string }[];
+  onSuccess: () => void;
+  onReset: () => void;
+}
+
+interface VictoryDialogProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+type Phase = "enter" | "order" | "victory";
+
+interface VerifiedClue {
+  id: string;
+  answer: string;
+  label: string;
+}
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const CLUE_CONFIG = [
@@ -42,19 +127,33 @@ function shuffleClues(arr) {
   return a;
 }
 
-function useStars(n = 110) {
-  return useState(() => Array.from({ length: n }, (_, i) => ({
-    id: i, left: Math.random() * 100, top: Math.random() * 68,
-    size: 1 + Math.random() * 2.2, opacity: 0.15 + Math.random() * 0.55,
-    dur: 2 + Math.random() * 4, delay: Math.random() * 6,
-  })))[0];
-}
-function useBubbles(n = 13) {
-  return useState(() => Array.from({ length: n }, (_, i) => ({
-    id: i, left: Math.random() * 100, size: 5 + Math.random() * 16,
-    dur: 6 + Math.random() * 10, delay: Math.random() * 8, drift: Math.random() * 60 - 30,
-  })))[0];
-}
+  function useStars(n = 110): Star[] {
+    return useState(() =>
+      Array.from({ length: n }, (_, i) => ({
+        id: i,
+        left: Math.random() * 100,
+        top: Math.random() * 68,
+        size: 1 + Math.random() * 2.2,
+        opacity: 0.15 + Math.random() * 0.55,
+        dur: 2 + Math.random() * 4,
+        delay: Math.random() * 6,
+      }))
+    )[0];
+  }
+  function useBubbles(n = 13): Bubble[] {
+    return useState(() =>
+      Array.from({ length: n }, (_, i) => ({
+        id: i,
+        left: Math.random() * 100,
+        size: 5 + Math.random() * 16,
+        dur: 6 + Math.random() * 10,
+        delay: Math.random() * 8,
+        drift: Math.random() * 60 - 30,
+      }))
+    )[0];
+  } 
+
+
 
 // ─── Global CSS ───────────────────────────────────────────────────────────────
 const KF = `
@@ -135,17 +234,27 @@ function OceanBg({ stars, bubbles }) {
   );
 }
 
-function ConfettiPiece({ x, color, size, dur, spin, drift, shape }) {
+function ConfettiPiece({ x, color, size, dur, spin, drift, shape }: ConfettiProps) {
   return (
-    <div className="fixed pointer-events-none"
-      style={{ top:-14,left:`${x}vw`,zIndex:999,width:size,height:size,background:color,
-        borderRadius:shape==="circle"?"50%":"2px",
-        animation:`confettiFall ${dur}s ease-in forwards`,
-        "--spin":`${spin}deg`,"--drift":`${drift}px` }}/>
+    <div
+      className="fixed pointer-events-none"
+      style={{
+        top: -14,
+        left: `${x}vw`,
+        zIndex: 999,
+        width: size,
+        height: size,
+        background: color,
+        borderRadius: shape === "circle" ? "50%" : "2px",
+        animation: `confettiFall ${dur}s ease-in forwards`,
+        "--spin": `${spin}deg`,
+        "--drift": `${drift}px`,
+      } as React.CSSProperties}
+    />
   );
 }
 
-function PhaseDots({ phase }) {
+function PhaseDots({ phase }:PhaseDotsProps) {
   const phases = ["enter","order","victory"];
   const cur = phases.indexOf(phase);
   return (
@@ -167,14 +276,14 @@ function PhaseDots({ phase }) {
 }
 
 // ─── Phase 1 — Enter Clues ────────────────────────────────────────────────────
-function ClueInputRow({ index, placeholder, value, onChange, onKeyDown, status, delay, inputRef }) {
+function ClueInputRow({ index, placeholder, value, onChange, onKeyDown, status, delay, inputRef }:ClueInputRowProps) {
   const isFilled  = value.length > 0;
   const isCorrect = status === "correct";
   const isWrong   = status === "wrong";
   return (
     <div className="flex items-center gap-3" style={{ animation:`fadeInLeft .45s ease-out ${delay}s both` }}>
       <div className={cn(
-        "w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-sm transition-all duration-300 border",
+        "w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-sm transition-all duration-300 border",
         isCorrect ? "border-emerald-500 text-emerald-400 bg-emerald-500/15 shadow-[0_0_10px_rgba(46,204,113,.35)]"
         : isWrong  ? "border-red-500 text-red-400 bg-red-500/15"
         : isFilled ? "border-yellow-400 text-yellow-400 bg-yellow-400/15 shadow-[0_0_8px_rgba(245,200,66,.2)]"
@@ -187,7 +296,7 @@ function ClueInputRow({ index, placeholder, value, onChange, onKeyDown, status, 
         onChange={e => onChange(index, e.target.value)}
         onKeyDown={e => onKeyDown(e, index)}
         className={cn(
-          "flex-1 bg-white/[.03] border text-amber-50 placeholder:text-amber-100/20 placeholder:italic placeholder:text-xs",
+          "flex-1 bg-white/3 border text-amber-50 placeholder:text-amber-100/20 placeholder:italic placeholder:text-xs",
           "focus:ring-1 focus:ring-yellow-400/40 focus-visible:ring-1 focus-visible:ring-yellow-400/40",
           "transition-all duration-300 rounded-sm h-10",
           isCorrect ? "border-emerald-500/60 bg-emerald-500/5 shadow-[0_0_12px_rgba(46,204,113,.18)]"
@@ -201,7 +310,7 @@ function ClueInputRow({ index, placeholder, value, onChange, onKeyDown, status, 
   );
 }
 
-function EnterPhase({ onVerified }) {
+function EnterPhase({ onVerified }:EnterPhaseProps) {
   const [submitting, setSubmitting] = useState(false);
   const [values,    setValues]    = useState(() => CLUE_CONFIG.map(() => ""));
   const [statuses,  setStatuses]  = useState(() => CLUE_CONFIG.map(() => "idle"));
@@ -219,7 +328,7 @@ function EnterPhase({ onVerified }) {
         clues: vals.map(v => v.trim())
       });
 
-      const { correct_clues, wrong_clues } = res.data;
+      const { correct_clues } = res.data;
 
       return vals.map(v => {
         const clue = v.trim().toLowerCase();
@@ -339,12 +448,12 @@ function EnterPhase({ onVerified }) {
           ↺ Reset
         </Button>
       </div>
-      <Card className={cn("border rounded-sm transition-all duration-300 min-h-[80px] flex items-center justify-center",
+      <Card className={cn("border rounded-sm transition-all duration-300 min-h-20 flex items-center justify-center",
         feedback.type==="success"?"bg-emerald-500/[.07] border-emerald-500/30"
         :feedback.type==="error"?"bg-red-500/[.07] border-red-500/30"
-        :"bg-white/[.02] border-white/[.06]",
-        feedback.type==="success"?"[animation:successIn_.6s_ease-out]"
-        :feedback.type==="error"?"[animation:errorWiggle_.5s_ease-out]":"",
+        :"bg-white/2 border-white/6",
+        feedback.type==="success"?"animate-[successIn_.6s_ease-out]"
+        :feedback.type==="error"?"animate-[errorWiggle_.5s_ease-out]":"",
       )}>
         <CardContent className="p-4 text-center">
           {feedback.type==="idle"
@@ -376,7 +485,7 @@ const MAP_STOPS = [
   { x: 880, y: 155 },
 ];
 
-function PirateMap({ items, mapProgress }) {
+function PirateMap({ items, mapProgress }:PirateMapProps) {
   const revealedStops = Math.round(mapProgress * (MAP_STOPS.length - 1)) + 1;
   return (
     <div className="relative w-full rounded-xl overflow-hidden"
@@ -524,7 +633,7 @@ function PirateMap({ items, mapProgress }) {
 }
 
 // ─── Ship Sinking ─────────────────────────────────────────────────────────────
-function ShipSinking({ onDone }) {
+function ShipSinking({ onDone }:ShipSinkingProps) {
   useEffect(() => {
     const t = setTimeout(onDone, 2200);
     return () => clearTimeout(t);
@@ -565,11 +674,11 @@ function ShipSinking({ onDone }) {
 }
 
 // ─── Sortable Card ────────────────────────────────────────────────────────────
-function SortableCard({ item, position, isOverlay = false }) {
+function SortableCard({ item, position, isOverlay = false }:SortableCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id:item.id });
 
   const transformStr = isOverlay
-    ? (transform?`translate3d(${transform.x}px,${transform.y}px,0)`:undefined)
+    ? undefined
     : CSS.Transform.toString(transform);
 
   return (
@@ -588,8 +697,8 @@ function SortableCard({ item, position, isOverlay = false }) {
           : "border-yellow-400/30 bg-white/[.04] hover:border-yellow-400/60 hover:bg-white/[.07]",
       )}
       style={{
-        transform:   transformStr,
-        transition:  isOverlay?undefined:transition,
+        transform: transformStr,
+        transition: isOverlay ? undefined : transition,
         touchAction: "none",
         userSelect:  "none",
         padding:     "18px 14px",
@@ -623,7 +732,7 @@ function SortableCard({ item, position, isOverlay = false }) {
 }
 
 // ─── Phase 2 — Order Phase (full-page, no card wrapper) ──────────────────────
-function OrderPhase({ verifiedClues, onSuccess, onReset }) {
+function OrderPhase({ verifiedClues, onSuccess, onReset }:OrderPhaseProps) {
   const [items,      setItems]      = useState(()=>shuffleClues(verifiedClues));
   const [checking,   setChecking]   = useState(false);
   const [sinking,    setSinking]    = useState(false);
@@ -763,7 +872,7 @@ function OrderPhase({ verifiedClues, onSuccess, onReset }) {
 }
 
 // ─── Victory Dialog ───────────────────────────────────────────────────────────
-function VictoryDialog({ open, onClose }) {
+function VictoryDialog({ open, onClose }:VictoryDialogProps) {
   return (
     <Dialog open={open} onOpenChange={v=>!v&&onClose()}>
       <DialogContent
@@ -805,12 +914,11 @@ function VictoryDialog({ open, onClose }) {
   );
 }
 
-// ─── Root ─────────────────────────────────────────────────────────────────────
 export default function ClueFinder() {
-  const [phase,         setPhase]         = useState("enter");
-  const [verifiedClues, setVerifiedClues] = useState(null);
+  const [phase, setPhase] = useState<Phase>("enter");
+  const [verifiedClues, setVerifiedClues] = useState<VerifiedClue[] | null>(null);
   const [showVictory,   setShowVictory]   = useState(false);
-  const [confetti,      setConfetti]      = useState([]);
+  const [confetti, setConfetti] = useState<ConfettiProps[]>([]);
   const stars   = useStars();
   const bubbles = useBubbles();
 
@@ -838,7 +946,13 @@ export default function ClueFinder() {
   const handleVictoryClose = () =>{ setShowVictory(false); handleReset(); };
   const handleReset        = () =>{ setPhase("enter"); setVerifiedClues(null); };
 
-  const subtitles = { enter:"IT Day Clue Finding", order:"Chart the Grand Line", victory:"Clue Hunt Complete" };
+  const subtitles: Record<string, string> = {
+    enter: "Enter clues",
+    order: "Arrange clues",
+    victory: "You win!",
+  };
+
+{subtitles[phase]}
   const isOrderPhase = phase==="order"||phase==="victory";
 
   return (

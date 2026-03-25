@@ -1,7 +1,6 @@
 import { createBrowserRouter, createRoutesFromElements, Route } from "react-router-dom";
 import LoginPage from "@/pages/auth/login";
 import SignupPage from "@/pages/auth/register";
-import HomePage from "@/pages/landing";
 import CluePage from "@/pages/landing/clue-page";
 
 
