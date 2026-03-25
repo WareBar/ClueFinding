@@ -715,14 +715,8 @@ function SortableCard({ item, position, isOverlay = false }:SortableCardProps) {
         style={{ fontFamily:"'Pirata One',cursive",fontSize:"1rem" }}>
         {position+1}
       </span>
-      {/* Label badge */}
-      <Badge variant="outline"
-        className="border-yellow-400/25 text-amber-600 bg-amber-400/5 text-[.5rem] tracking-widest uppercase w-full justify-center pointer-events-none"
-        style={{ fontFamily:"'Cinzel',serif" }}>
-        {item.label}
-      </Badge>
       {/* Answer */}
-      <span className="italic text-amber-100 text-center leading-snug pointer-events-none font-medium"
+      <span className="italic text-amber-100 text-center leading-snug pointer-events-none font-medium uppercase"
         style={{ fontFamily:"'IM Fell English',serif",fontSize:"1rem",
           textShadow:"0 1px 8px rgba(0,0,0,.6)",maxWidth:120,wordBreak:"break-word" }}>
         {item.answer}
