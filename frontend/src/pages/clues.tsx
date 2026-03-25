@@ -112,7 +112,7 @@ function OceanBg({ stars, bubbles }) {
             animation:`skullDrift ${15+i*3}s ease-in-out ${d.animDelay}s infinite`,
             top:("top" in d)?d.top:undefined, bottom:("bottom" in d)?d.bottom:undefined,
             left:("left" in d)?d.left:undefined, right:("right" in d)?d.right:undefined,
-          }}>BARRY ADAM</div>
+          }}>ADAM</div>
       ))}
       <div className="absolute bottom-0 left-0 w-[200%] h-40" style={{ animation:"waveA 8s linear infinite" }}>
         <svg width="100%" height="160" viewBox="0 0 1440 160" preserveAspectRatio="none">
@@ -202,6 +202,7 @@ function ClueInputRow({ index, placeholder, value, onChange, onKeyDown, status, 
 }
 
 function EnterPhase({ onVerified }) {
+  const [submitting, setSubmitting] = useState(false);
   const [values,    setValues]    = useState(() => CLUE_CONFIG.map(() => ""));
   const [statuses,  setStatuses]  = useState(() => CLUE_CONFIG.map(() => "idle"));
   const [feedback,  setFeedback]  = useState({ type:"idle", msg:"" });
@@ -250,6 +251,9 @@ function EnterPhase({ onVerified }) {
     }
   };
   const doSubmit = async (vals) => {
+    if (submitting) return;
+
+    setSubmitting(true);
     setValidated(true);
 
     const st = await checkCluesAPI(vals);
@@ -273,6 +277,8 @@ function EnterPhase({ onVerified }) {
         msg: `Wrong clues. Try again. (${cc}/${CLUE_CONFIG.length} correct)`
       });
     }
+
+    setSubmitting(false);
   };
   const doReset = () => {
     setValues(CLUE_CONFIG.map(()=>""));
@@ -313,14 +319,20 @@ function EnterPhase({ onVerified }) {
       </div>
       <div className="h-px w-full mb-5" style={{ background:"linear-gradient(90deg,transparent,rgba(245,200,66,.18),transparent)" }}/>
       <div className="flex gap-3 mb-5">
-        <Button disabled={!allFilled} onClick={()=>doSubmit(values)}
-          className={cn("flex-1 tracking-widest uppercase text-xs font-bold rounded-sm h-11 transition-all duration-300 border-0",
-            allFilled
-              ?"bg-gradient-to-r from-amber-700 via-yellow-400 to-amber-700 text-stone-900 shadow-[0_4px_20px_rgba(245,200,66,.28)] hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(245,200,66,.4)]"
-              :"bg-gradient-to-r from-stone-800 via-stone-700 to-stone-800 text-stone-600 cursor-not-allowed",
-          )} style={{ fontFamily:"'Cinzel',serif" }}>
-          Submit
-        </Button>
+      <Button
+        disabled={!allFilled || submitting}
+        onClick={() => doSubmit(values)}
+        className={cn(
+          "flex-1 tracking-widest uppercase text-xs font-bold rounded-sm h-11",
+          submitting
+            ? "bg-stone-700 text-stone-400 cursor-not-allowed"
+            : allFilled
+            ? "bg-gradient-to-r from-amber-700 via-yellow-400 to-amber-700 text-stone-900"
+            : "bg-stone-800 text-stone-600 cursor-not-allowed"
+        )}
+      >
+        {submitting ? "Checking clues..." : "Submit"}
+      </Button>
         <Button variant="outline" onClick={doReset}
           className="flex-1 tracking-widest uppercase text-xs h-11 rounded-sm bg-transparent border-amber-100/15 text-amber-100/45 hover:border-amber-100/40 hover:text-amber-100 hover:bg-transparent transition-all"
           style={{ fontFamily:"'Cinzel',serif" }}>
@@ -657,6 +669,8 @@ function OrderPhase({ verifiedClues, onSuccess, onReset }) {
     } catch (err) {
       console.error(err);
       setSinking(true);
+    } finally {
+      setChecking(false);
     }
   };
 
@@ -724,11 +738,18 @@ function OrderPhase({ verifiedClues, onSuccess, onReset }) {
             style={{ background:"linear-gradient(90deg,transparent,rgba(245,200,66,.2),transparent)" }}/>
 
           <div className="flex gap-3">
-            <Button onClick={checkOrder} disabled={checking}
-              className="flex-1 tracking-widest uppercase text-xs font-bold rounded-sm h-12 border-0 bg-gradient-to-r from-amber-700 via-yellow-400 to-amber-700 text-stone-900 shadow-[0_4px_20px_rgba(245,200,66,.28)] hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(245,200,66,.4)] transition-all duration-300"
-              style={{ fontFamily:"'Cinzel',serif" }}>
-              Confirm Route
-            </Button>
+          <Button
+            onClick={checkOrder}
+            disabled={checking}
+            className={cn(
+              "flex-1 tracking-widest uppercase text-xs font-bold rounded-sm h-12 transition-all duration-300",
+              checking
+                ? "bg-stone-700 text-stone-400 cursor-not-allowed"
+                : "bg-gradient-to-r from-amber-700 via-yellow-400 to-amber-700 text-stone-900"
+            )}
+          >
+            {checking ? "Confirming route..." : "Confirm Route"}
+          </Button>
             <Button variant="outline" onClick={onReset}
               className="flex-1 tracking-widest uppercase text-xs h-12 rounded-sm bg-transparent border-amber-100/15 text-amber-100/45 hover:border-amber-100/40 hover:text-amber-100 hover:bg-transparent transition-all"
               style={{ fontFamily:"'Cinzel',serif" }}>
